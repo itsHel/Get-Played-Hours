@@ -1,0 +1,151 @@
+<!doctype html>
+<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <style type=text/css>
+            body {
+                font-family: 'Trebuchet MS', Helvetica, sans-serif;
+                margin: 0px;
+            }
+            a{
+                all:unset;
+                cursor:pointer;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            @media all and (max-width:1000px) {
+                
+            }
+            header{
+                
+            }
+            body > div{
+                display:flex;
+            }
+            .imgdiv{
+                border:1px solid red;
+            }
+            button{
+                cursor:pointer;
+            }
+            .imgdiv li{
+                cursor:pointer;
+                padding:2px;
+            }
+            .imgdiv li:hover{
+                text-decoration: underline;
+            }
+            button{
+                padding:4px;
+                font-size: 111%;
+                margin:4px;
+            }
+        </style>
+        <title>new</title>
+    </head>
+    
+    <body>
+        <header>
+            
+        </header>
+        <button id=dota>Dota</button>
+        <button id=cs>CS</button>
+        <div>
+            <div class=imgdiv></div>
+            <div class=result><ul></ul></div>
+        </div>
+    </body>
+    
+    <script>
+        const url_base = "http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1?";
+        const key = "key=593805209340591EDDE6E4029BD5A3DE";
+        let url, teams = [];
+        let playersUrl = "https://api.opendota.com/api/proPlayers";
+        let game;
+        
+        let list;
+        $(function(){            
+            $("#dota").on("click", function(){
+                game = "Dota 2";
+                getTeams("https://api.opendota.com/api/proPlayers");
+                $(".result ul").html("");
+            });
+            $("#cs").on("click", function(){
+                game = "Counter-Strike: Global Offensive";
+                getTeams("temp/cs_players.json");
+                $(".result ul").html("");
+            });
+            function getTeams(playersUrl){
+                
+                $.getJSON(playersUrl, function(data){
+                    console.log(data.length);
+                    
+                /*
+                for(let i=0;i<data.length;i++){
+                    if(data[i].steamid == "")
+                        console.log("https://liquipedia.net/counterstrike/" + data[i].name);
+                }
+                return;
+                */
+                    data = data.filter(function(player){
+                        return (player.team_name != null); 
+                    });
+                    data = data.filter(function(player){
+                        return (player.team_name.replace(/\s/g, "") != ""); 
+                    });
+                    //console.log(data);
+                    data = data.sort(function(a, b){
+                        let x = a.team_name.toLowerCase(); 
+                        let y = b.team_name.toLowerCase();
+                        if(x > y)
+                            return 1;
+                        if(y > x)
+                            return -1;
+                        return 0;
+                    });
+                    let temp = "", playerCount = 0;
+					//teams listing
+                    let x = data.map(function(player, index){
+                        if(temp == player.team_name)
+                            return;
+                        temp = player.team_name;
+                        return "<li onclick='getPlayersHours(" + index + ",\"" + game + "\")'>" + player.team_name.trim() + " -- " + index + "</li>";
+                    }).join("");
+                    $(".imgdiv").html("<ul>" + x + "</ul>");
+                    list = data;
+                });
+            }
+            $("#dota").click();
+        });
+        function getPlayersHours(id){
+            let hours = [];
+            for(let i = id; i < id + 10; i++){
+                $.getJSON("https://cors-anywhere.herokuapp.com/http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1?key=593805209340591EDDE6E4029BD5A3DE&steamid=" + list[i].steamid, function(data){
+                    //console.log("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1?key=593805209340591EDDE6E4029BD5A3DE&steamid=" + list[i].steamid);
+                    console.log(i + " - " + list[i].name);
+                    //console.log(id);
+                    console.log("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1?key=593805209340591EDDE6E4029BD5A3DE&steamid=" + list[i].steamid);
+                        if(jQuery.isEmptyObject(data.response)){
+                            console.log(list[i].name + " -- empty");
+                            $(".result ul").append("<li><span style='color:red'>" + list[i].team_name + " </span> " + list[i].name + " - Hidden</li>");
+                            id++;
+                            return;
+                        }
+						//players listing
+                        if(data.response.games[0].name == game)
+                            $(".result ul").append("<li><span style='color:red'>" + list[i].team_name + "</span> " + list[i].name + " - " + Math.round(data.response.games[0].playtime_2weeks/60) + " h</li>");
+                        else
+                            console.log("bad game: - " + data.response.games[0].name)
+                        id++;
+                    //}
+                });            
+                if(list[i].team_name != list[i+1].team_name){
+                    $(".result ul").append("--------------------------------");
+                    console.log("--------------------------------");
+                    break;
+                }
+            }
+        }
+    </script>
+</html>
